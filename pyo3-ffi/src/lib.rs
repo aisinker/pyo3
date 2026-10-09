@@ -36,6 +36,12 @@
 //! - `abi3`: Restricts PyO3's API to a subset of the full Python API which is guaranteed by
 //! [PEP 384] to be forward-compatible with future Python versions.
 //!
+//! - `dynamic-loading`: Does not link against libpython at build time. Every Python C API
+//! symbol is resolved from a shared library opened at runtime; see the
+//! [`dynamic_loading`] module. Only implemented for CPython on Windows and Unix-like platforms,
+//! which includes the C variadic functions of the Python API as real wrappers; the build script
+//! reports an error if it is enabled for another implementation.
+//!
 //! ## `rustc` environment flags
 //!
 //! PyO3 uses `rustc`'s `--cfg` flags to enable or disable code used for different Python versions.
@@ -221,7 +227,7 @@
 //!             "sum_as_string expected an int for positional argument {}\0",
 //!             n_arg
 //!         );
-//!         PyErr_SetString(PyExc_TypeError, msg.as_ptr().cast::<c_char>());
+//!         PyErr_SetString(python_static_value!(PyExc_TypeError), msg.as_ptr().cast::<c_char>());
 //!         return None;
 //!     }
 //!
@@ -257,7 +263,10 @@
 //!             ));
 //!             let msg = format!("cannot fit {} in 32 bits\0", s);
 //!
-//!             PyErr_SetString(PyExc_OverflowError, msg.as_ptr().cast::<c_char>());
+//!             PyErr_SetString(
+//!                 python_static_value!(PyExc_OverflowError),
+//!                 msg.as_ptr().cast::<c_char>(),
+//!             );
 //!         }
 //!         Py_DECREF(obj_repr);
 //!     }
@@ -270,7 +279,7 @@
 //! ) -> *mut PyObject {
 //!     if nargs != 2 {
 //!         PyErr_SetString(
-//!             PyExc_TypeError,
+//!             python_static_value!(PyExc_TypeError),
 //!             c"sum_as_string expected 2 positional arguments".as_ptr(),
 //!         );
 //!         return core::ptr::null_mut();
@@ -293,7 +302,10 @@
 //!             PyUnicode_FromStringAndSize(string.as_ptr().cast::<c_char>(), string.len() as isize)
 //!         }
 //!         None => {
-//!             PyErr_SetString(PyExc_OverflowError, c"arguments too large to add".as_ptr());
+//!             PyErr_SetString(
+//!                 python_static_value!(PyExc_OverflowError),
+//!                 c"arguments too large to add".as_ptr(),
+//!             );
 //!             core::ptr::null_mut()
 //!         }
 //!     }
@@ -379,7 +391,12 @@
 
 #[cfg(not(PyPy))]
 extern crate alloc;
-#[cfg(not(any(Py_3_14, target_arch = "wasm32")))]
+// `std` is used by the `HangThread` guard on most configurations, and always by
+// the runtime loader of the `dynamic-loading` feature.
+#[cfg(any(
+    not(any(Py_3_14, target_arch = "wasm32")),
+    all(feature = "dynamic-loading", any(windows, unix))
+))]
 extern crate std;
 
 // Until `extern type` is stabilized, use the recommended approach to
@@ -436,6 +453,13 @@ mod macros;
 
 pub mod compat;
 mod impl_;
+
+/// Explicit runtime loading of the Python shared library.
+///
+/// Enabled with the `dynamic-loading` feature; see the module documentation for
+/// how the library is located and how symbols are resolved.
+#[cfg(all(feature = "dynamic-loading", any(windows, unix)))]
+pub use self::impl_::dynamic_loading;
 
 pub use self::abstract_::*;
 #[cfg(not(RustPython))]

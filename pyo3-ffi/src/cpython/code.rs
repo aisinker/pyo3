@@ -72,7 +72,7 @@ extern_libpython! {
 #[inline]
 #[cfg(not(PyPy))]
 pub unsafe fn PyCode_Check(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyCode_Type)
+    Py_IS_TYPE(op, python_static_object!(PyCode_Type))
 }
 
 extern_libpython! {
@@ -142,14 +142,34 @@ extern_libpython! {
         lnotab: *mut PyObject,
     ) -> *mut PyObject;
 
-    #[cfg_attr(not(Py_3_12), link_name = "_PyCode_GetExtra")]
+    // Was moved to the unstable API tier on Py_3_12; older versions export the
+    // private name. The name is selected with `cfg` and a plain `#[link_name]`
+    // rather than with `cfg_attr`, so that the `dynamic-loading` wrappers resolve
+    // the same symbol: they read `#[link_name]` and cannot evaluate a `cfg_attr`.
+    #[cfg(not(Py_3_12))]
+    #[link_name = "_PyCode_GetExtra"]
     pub fn PyUnstable_Code_GetExtra(
         code: *mut PyObject,
         index: Py_ssize_t,
         extra: *mut *mut c_void,
     ) -> c_int;
 
-    #[cfg_attr(not(Py_3_12), link_name = "_PyCode_SetExtra")]
+    #[cfg(Py_3_12)]
+    pub fn PyUnstable_Code_GetExtra(
+        code: *mut PyObject,
+        index: Py_ssize_t,
+        extra: *mut *mut c_void,
+    ) -> c_int;
+
+    #[cfg(not(Py_3_12))]
+    #[link_name = "_PyCode_SetExtra"]
+    pub fn PyUnstable_Code_SetExtra(
+        code: *mut PyObject,
+        index: Py_ssize_t,
+        extra: *mut c_void,
+    ) -> c_int;
+
+    #[cfg(Py_3_12)]
     pub fn PyUnstable_Code_SetExtra(
         code: *mut PyObject,
         index: Py_ssize_t,

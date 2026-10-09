@@ -6,7 +6,7 @@ use core::ffi::{c_int, c_long};
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyBool_Check(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyBool_Type)
+    Py_IS_TYPE(op, python_static_object!(PyBool_Type))
 }
 
 extern_libpython! {
@@ -32,10 +32,10 @@ pub unsafe fn Py_False() -> *mut PyObject {
     return Py_GetConstantBorrowed(Py_CONSTANT_FALSE);
 
     #[cfg(all(not(GraalPy), not(all(Py_3_13, Py_LIMITED_API))))]
-    return (&raw mut _Py_FalseStruct).cast();
+    return (python_static_object!(_Py_FalseStruct)).cast();
 
     #[cfg(GraalPy)]
-    return _Py_FalseStructReference;
+    return python_static_value!(_Py_FalseStructReference);
 }
 
 #[inline]
@@ -44,10 +44,10 @@ pub unsafe fn Py_True() -> *mut PyObject {
     return Py_GetConstantBorrowed(Py_CONSTANT_TRUE);
 
     #[cfg(all(not(GraalPy), not(all(Py_3_13, Py_LIMITED_API))))]
-    return (&raw mut _Py_TrueStruct).cast();
+    return (python_static_object!(_Py_TrueStruct)).cast();
 
     #[cfg(GraalPy)]
-    return _Py_TrueStructReference;
+    return python_static_value!(_Py_TrueStructReference);
 }
 
 #[inline]

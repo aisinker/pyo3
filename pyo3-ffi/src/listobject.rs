@@ -19,7 +19,7 @@ pub unsafe fn PyList_Check(op: *mut PyObject) -> c_int {
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyList_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyList_Type)
+    Py_IS_TYPE(op, python_static_object!(PyList_Type))
 }
 
 extern_libpython! {

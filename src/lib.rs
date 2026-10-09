@@ -151,7 +151,8 @@
 //!
 //! # Minimum supported Rust and Python versions
 //!
-//! Requires Rust 1.85 or greater.
+//! Requires Rust 1.85 or greater. The `dynamic-loading` feature additionally
+//! requires Rust 1.99 or greater, which the build script checks for.
 //!
 //! PyO3 supports the following Python distributions:
 //!   - CPython 3.9 or greater

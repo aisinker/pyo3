@@ -1,6 +1,13 @@
 use crate::methodobject::PyMethodDef;
 use crate::moduleobject::PyModuleDef;
 use crate::object::PyObject;
+#[cfg_attr(
+    all(feature = "dynamic-loading", any(windows, unix)),
+    allow(
+        unused_imports,
+        reason = "only used by the PyArg_UnpackTuple declaration, which dynamic loading replaces"
+    )
+)]
 use crate::pyport::Py_ssize_t;
 use core::ffi::{c_char, c_int, c_long};
 

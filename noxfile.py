@@ -123,6 +123,16 @@ def test_rust(session: nox.Session):
         extra_flags.append("--no-run")
 
     _run_cargo_test(session, package="pyo3-ffi", extra_flags=extra_flags)
+    if _dynamic_loading_supported():
+        # The loader's own tests (the order in which it tries candidates) only
+        # exist with the feature enabled, and the feature sets below are
+        # features of the `pyo3` crate.
+        _run_cargo_test(
+            session,
+            package="pyo3-ffi",
+            features="dynamic-loading",
+            extra_flags=extra_flags,
+        )
 
     env = os.environ.copy()
     extra_flags.append("--no-default-features")
@@ -301,10 +311,13 @@ def _clippy(
     env: dict[str, str] | None = None,
     version: tuple[int, int] | None = None,
     free_threaded: bool = FREE_THREADED_BUILD,
+    implementation: str | None = None,
 ) -> bool:
     success = True
     env = env or os.environ
-    for feature_set in _get_feature_sets(version=version, free_threaded=free_threaded):
+    for feature_set in _get_feature_sets(
+        version=version, free_threaded=free_threaded, implementation=implementation
+    ):
         try:
             _run_cargo(
                 session,
@@ -365,11 +378,19 @@ def clippy_all(session: nox.Session) -> None:
     success = True
 
     def _clippy_with_config(
-        *, env: dict[str, str], version: tuple[int, int] | None, free_threaded: bool
+        *,
+        env: dict[str, str],
+        version: tuple[int, int] | None,
+        free_threaded: bool,
+        implementation: str,
     ) -> None:
         nonlocal success
         success &= _clippy(
-            session, env=env, version=version, free_threaded=free_threaded
+            session,
+            env=env,
+            version=version,
+            free_threaded=free_threaded,
+            implementation=implementation,
         )
 
     _for_all_version_configs(session, _clippy_with_config)
@@ -384,11 +405,15 @@ def check_all(session: nox.Session) -> None:
     success = True
 
     def _check(
-        *, env: dict[str, str], version: tuple[int, int] | None, free_threaded: bool
+        *,
+        env: dict[str, str],
+        version: tuple[int, int] | None,
+        free_threaded: bool,
+        implementation: str,
     ) -> None:
         nonlocal success
         for feature_set in _get_feature_sets(
-            version=version, free_threaded=free_threaded
+            version=version, free_threaded=free_threaded, implementation=implementation
         ):
             try:
                 _run_cargo(
@@ -1871,8 +1896,62 @@ def _get_feature_sets(
     *,
     version: tuple[int, int] | None = None,
     free_threaded: bool = FREE_THREADED_BUILD,
+    implementation: str | None = None,
 ) -> tuple[str | None, ...]:
     """Returns feature sets to use for Rust jobs"""
+    feature_sets = _get_base_feature_sets(version=version, free_threaded=free_threaded)
+    if not _dynamic_loading_supported(implementation):
+        return feature_sets
+    # `dynamic-loading` replaces the way libpython is loaded for the whole
+    # crate, so it is added to every combination: the Rust jobs then compile it
+    # (and run clippy with warnings denied) next to all the other features, and
+    # the doctests are built against it as well.
+    return tuple(_add_dynamic_loading(feature_set) for feature_set in feature_sets)
+
+
+def _add_dynamic_loading(feature_set: str | None) -> str:
+    """The feature set with `dynamic-loading` added, without empty entries"""
+    features = [feature for feature in (feature_set or "").split(",") if feature]
+    features.append("dynamic-loading")
+    return ",".join(features)
+
+
+def _dynamic_loading_supported(implementation: str | None = None) -> bool:
+    """Whether the `dynamic-loading` feature can be exercised by the Rust jobs here.
+
+    The feature resolves every symbol by name, so it is only implemented for
+    CPython; the PyPy and GraalPy C API name mangling is not applied there, and
+    the build script rejects those implementations. `implementation` is the
+    interpreter a job is configured for, and defaults to the one running this
+    script.
+
+    Its loaders exist for Windows and Unix-like platforms and they need `std`.
+    On the WebAssembly targets the feature would still compile, but the tests
+    could not open a Python shared library at runtime. The feature also needs to
+    define C variadic functions, which needs Rust 1.99; older toolchains - the
+    MSRV job in particular - are rejected by the build script, so the feature is
+    left out there.
+    """
+    if implementation is None:
+        implementation = sys.implementation.name
+    if implementation.lower() != "cpython":
+        return False
+    if _is_no_std() or sys.platform not in ("win32", "linux", "darwin"):
+        return False
+    cargo_target = os.getenv("CARGO_BUILD_TARGET", "")
+    if "wasm" in cargo_target or "emscripten" in cargo_target:
+        return False
+    (major, minor, *_rest) = get_rust_version()
+    return (major, minor) >= (1, 99)
+
+
+@lru_cache
+def _get_base_feature_sets(
+    *,
+    version: tuple[int, int] | None = None,
+    free_threaded: bool = FREE_THREADED_BUILD,
+) -> tuple[str | None, ...]:
+    """Returns feature sets to use for Rust jobs, without optional additions"""
     if version is None:
         version = sys.version_info[:2]
 
@@ -2020,7 +2099,12 @@ def _run_cargo_test(
 
 class Job(Protocol):
     def __call__(
-        self, *, env: dict[str, str], version: tuple[int, int], free_threaded: bool
+        self,
+        *,
+        env: dict[str, str],
+        version: tuple[int, int],
+        free_threaded: bool,
+        implementation: str,
     ) -> None: ...
 
 
@@ -2034,7 +2118,12 @@ def _for_all_version_configs(session: nox.Session, job: Job) -> None:
             config_file.set(implementation, version)
             major_minor = tuple[int, int](map(int, version.strip("t").split(".")))
             free_threaded = version.endswith("t")
-            job(env=env, version=major_minor, free_threaded=free_threaded)
+            job(
+                env=env,
+                version=major_minor,
+                free_threaded=free_threaded,
+                implementation=implementation,
+            )
 
         for version in PY_VERSIONS:
             _job_with_config("CPython", version)

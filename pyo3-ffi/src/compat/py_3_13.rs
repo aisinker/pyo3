@@ -66,7 +66,7 @@ compat_function!(
 
         if !reference.is_null() && PyWeakref_Check(reference) == 0 {
             *pobj = core::ptr::null_mut();
-            PyErr_SetString(PyExc_TypeError, c"expected a weakref".as_ptr());
+            PyErr_SetString(python_static_value!(PyExc_TypeError), c"expected a weakref".as_ptr());
             return -1;
         }
         let obj = PyWeakref_GetObject(reference);
@@ -195,7 +195,7 @@ compat_function!(
             return 1; // found
         }
         *result = core::ptr::null_mut();
-        if PyErr_ExceptionMatches(PyExc_AttributeError) != 0 {
+        if PyErr_ExceptionMatches(python_static_value!(PyExc_AttributeError)) != 0 {
             PyErr_Clear();
             return 0; // not found
         }

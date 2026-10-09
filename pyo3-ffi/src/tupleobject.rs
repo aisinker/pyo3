@@ -18,7 +18,7 @@ pub unsafe fn PyTuple_Check(op: *mut PyObject) -> c_int {
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyTuple_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyTuple_Type)
+    Py_IS_TYPE(op, python_static_object!(PyTuple_Type))
 }
 
 extern_libpython! {

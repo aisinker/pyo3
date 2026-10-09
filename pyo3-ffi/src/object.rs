@@ -237,8 +237,8 @@ extern_libpython! {
 pub unsafe fn Py_SIZE(ob: *mut PyObject) -> Py_ssize_t {
     #[cfg(not(GraalPy))]
     {
-        debug_assert_ne!((*ob).ob_type, &raw mut crate::PyLong_Type);
-        debug_assert_ne!((*ob).ob_type, &raw mut crate::PyBool_Type);
+        debug_assert_ne!((*ob).ob_type, python_static_object!(crate::PyLong_Type));
+        debug_assert_ne!((*ob).ob_type, python_static_object!(crate::PyBool_Type));
         (*ob.cast::<PyVarObject>()).ob_size
     }
     #[cfg(GraalPy)]
@@ -664,10 +664,10 @@ pub unsafe fn Py_None() -> *mut PyObject {
     return Py_GetConstantBorrowed(Py_CONSTANT_NONE);
 
     #[cfg(all(not(GraalPy), not(all(Py_3_13, Py_LIMITED_API))))]
-    return &raw mut _Py_NoneStruct;
+    return python_static_object!(_Py_NoneStruct);
 
     #[cfg(GraalPy)]
-    return _Py_NoneStructReference;
+    return python_static_value!(_Py_NoneStructReference);
 }
 
 #[inline]
@@ -692,10 +692,10 @@ pub unsafe fn Py_NotImplemented() -> *mut PyObject {
     return Py_GetConstantBorrowed(Py_CONSTANT_NOT_IMPLEMENTED);
 
     #[cfg(all(not(GraalPy), not(all(Py_3_13, Py_LIMITED_API))))]
-    return &raw mut _Py_NotImplementedStruct;
+    return python_static_object!(_Py_NotImplementedStruct);
 
     #[cfg(GraalPy)]
-    return _Py_NotImplementedStructReference;
+    return python_static_value!(_Py_NotImplementedStructReference);
 }
 
 // skipped Py_RETURN_NOTIMPLEMENTED
@@ -750,7 +750,7 @@ pub unsafe fn PyType_Check(op: *mut PyObject) -> c_int {
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyType_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyType_Type)
+    Py_IS_TYPE(op, python_static_object!(PyType_Type))
 }
 
 extern_libpython! {

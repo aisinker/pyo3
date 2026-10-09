@@ -16,6 +16,14 @@ mod atomic_c_ulong {
         <GetAtomicCULong<{ core::mem::size_of::<core::ffi::c_ulong>() * 8 }> as AtomicCULongType>::Type;
 }
 
+/// Explicit runtime loading of the Python shared library.
+#[cfg(all(feature = "dynamic-loading", any(windows, unix)))]
+pub mod dynamic_loading;
+
+/// Implementation of the C variadic functions of the Python API.
+#[cfg(all(feature = "dynamic-loading", any(windows, unix)))]
+pub(crate) mod dynamic_variadics;
+
 /// Typedef for an atomic integer to match the platform-dependent c_ulong type.
 #[cfg(all(Py_GIL_DISABLED, not(Py_LIMITED_API)))]
 #[doc(hidden)]

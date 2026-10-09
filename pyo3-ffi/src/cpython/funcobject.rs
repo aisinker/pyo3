@@ -65,7 +65,7 @@ extern_libpython! {
 
 #[inline]
 pub unsafe fn PyFunction_Check(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyFunction_Type)
+    Py_IS_TYPE(op, python_static_object!(PyFunction_Type))
 }
 
 extern_libpython! {

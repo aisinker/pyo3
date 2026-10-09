@@ -29,7 +29,7 @@ compat_function!(
     ) -> core::ffi::c_int {
         if value.is_null() && crate::PyErr_Occurred().is_null() {
             crate::PyErr_SetString(
-                crate::PyExc_SystemError,
+                python_static_value!(crate::PyExc_SystemError),
                 c"PyModule_AddObjectRef() must be called with an exception raised if value is NULL".as_ptr(),
             );
             return -1;

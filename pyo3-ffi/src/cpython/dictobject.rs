@@ -57,13 +57,13 @@ extern_libpython! {
 #[inline]
 #[cfg(Py_3_15)]
 pub unsafe fn PyFrozenDict_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyFrozenDict_Type)
+    Py_IS_TYPE(op, python_static_object!(PyFrozenDict_Type))
 }
 
 #[inline]
 #[cfg(Py_3_15)]
 pub unsafe fn PyFrozenDict_Check(op: *mut PyObject) -> c_int {
-    PyObject_TypeCheck(op, &raw mut PyFrozenDict_Type)
+    PyObject_TypeCheck(op, python_static_object!(PyFrozenDict_Type))
 }
 
 #[inline]

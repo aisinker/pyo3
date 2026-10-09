@@ -17,7 +17,7 @@ pub unsafe fn PyDict_Check(op: *mut PyObject) -> c_int {
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyDict_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyDict_Type)
+    Py_IS_TYPE(op, python_static_object!(PyDict_Type))
 }
 
 extern_libpython! {
@@ -107,19 +107,19 @@ extern_libpython! {
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyDictKeys_Check(op: *mut PyObject) -> c_int {
-    PyObject_TypeCheck(op, &raw mut PyDictKeys_Type)
+    PyObject_TypeCheck(op, python_static_object!(PyDictKeys_Type))
 }
 
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyDictValues_Check(op: *mut PyObject) -> c_int {
-    PyObject_TypeCheck(op, &raw mut PyDictValues_Type)
+    PyObject_TypeCheck(op, python_static_object!(PyDictValues_Type))
 }
 
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyDictItems_Check(op: *mut PyObject) -> c_int {
-    PyObject_TypeCheck(op, &raw mut PyDictItems_Type)
+    PyObject_TypeCheck(op, python_static_object!(PyDictItems_Type))
 }
 
 extern_libpython! {

@@ -287,6 +287,15 @@ pub mod pyo3_build_script_impl {
         }
     }
 
+    /// The minor version of the `rustc` which is compiling the crate, if it could be determined.
+    ///
+    /// Build scripts can use this to report their own error when something needs a newer
+    /// compiler, instead of a crate declaring the higher version as its `rust-version` and
+    /// forcing it on everyone.
+    pub fn rustc_minor_version() -> Option<u32> {
+        super::rustc_minor_version()
+    }
+
     /// Emit libpython rpath link args if appropriate for the target and interpreter config.
     ///
     /// This form exists for pyo3-ffi where `get()` cannot be called.

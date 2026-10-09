@@ -56,39 +56,40 @@ extern_libpython! {
 #[inline]
 #[cfg(not(any(all(PyPy, not(Py_3_12)), GraalPy, RustPython)))]
 pub unsafe fn PyFrozenSet_CheckExact(ob: *mut PyObject) -> c_int {
-    (Py_TYPE(ob) == &raw mut PyFrozenSet_Type) as c_int
+    (Py_TYPE(ob) == python_static_object!(PyFrozenSet_Type)) as c_int
 }
 
 #[inline]
 #[cfg(not(any(all(PyPy, not(Py_3_12)), RustPython)))]
 pub unsafe fn PyFrozenSet_Check(ob: *mut PyObject) -> c_int {
-    (Py_TYPE(ob) == &raw mut PyFrozenSet_Type
-        || PyType_IsSubtype(Py_TYPE(ob), &raw mut PyFrozenSet_Type) != 0) as c_int
+    (Py_TYPE(ob) == python_static_object!(PyFrozenSet_Type)
+        || PyType_IsSubtype(Py_TYPE(ob), python_static_object!(PyFrozenSet_Type)) != 0) as c_int
 }
 
 #[inline]
 #[cfg(not(any(all(PyPy, not(Py_3_12)), RustPython)))]
 pub unsafe fn PyAnySet_CheckExact(ob: *mut PyObject) -> c_int {
-    (Py_TYPE(ob) == &raw mut PySet_Type || Py_TYPE(ob) == &raw mut PyFrozenSet_Type) as c_int
+    (Py_TYPE(ob) == python_static_object!(PySet_Type)
+        || Py_TYPE(ob) == python_static_object!(PyFrozenSet_Type)) as c_int
 }
 
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyAnySet_Check(ob: *mut PyObject) -> c_int {
     (PyAnySet_CheckExact(ob) != 0
-        || PyType_IsSubtype(Py_TYPE(ob), &raw mut PySet_Type) != 0
-        || PyType_IsSubtype(Py_TYPE(ob), &raw mut PyFrozenSet_Type) != 0) as c_int
+        || PyType_IsSubtype(Py_TYPE(ob), python_static_object!(PySet_Type)) != 0
+        || PyType_IsSubtype(Py_TYPE(ob), python_static_object!(PyFrozenSet_Type)) != 0) as c_int
 }
 
 #[inline]
 #[cfg(all(Py_3_10, not(RustPython)))]
 pub unsafe fn PySet_CheckExact(op: *mut PyObject) -> c_int {
-    crate::Py_IS_TYPE(op, &raw mut PySet_Type)
+    crate::Py_IS_TYPE(op, python_static_object!(PySet_Type))
 }
 
 #[inline]
 #[cfg(not(any(all(PyPy, not(Py_3_12)), RustPython)))]
 pub unsafe fn PySet_Check(ob: *mut PyObject) -> c_int {
-    (Py_TYPE(ob) == &raw mut PySet_Type || PyType_IsSubtype(Py_TYPE(ob), &raw mut PySet_Type) != 0)
-        as c_int
+    (Py_TYPE(ob) == python_static_object!(PySet_Type)
+        || PyType_IsSubtype(Py_TYPE(ob), python_static_object!(PySet_Type)) != 0) as c_int
 }

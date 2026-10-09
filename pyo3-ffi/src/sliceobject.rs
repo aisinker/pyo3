@@ -17,10 +17,10 @@ pub unsafe fn Py_Ellipsis() -> *mut PyObject {
     return Py_GetConstantBorrowed(Py_CONSTANT_ELLIPSIS);
 
     #[cfg(all(not(GraalPy), not(all(Py_3_13, Py_LIMITED_API))))]
-    return &raw mut _Py_EllipsisObject;
+    return python_static_object!(_Py_EllipsisObject);
 
     #[cfg(GraalPy)]
-    return _Py_EllipsisObjectReference;
+    return python_static_value!(_Py_EllipsisObjectReference);
 }
 
 #[cfg(not(Py_LIMITED_API))]
@@ -45,7 +45,7 @@ extern_libpython! {
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PySlice_Check(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PySlice_Type)
+    Py_IS_TYPE(op, python_static_object!(PySlice_Type))
 }
 
 extern_libpython! {

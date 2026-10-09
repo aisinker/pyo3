@@ -10,13 +10,13 @@ extern_libpython! {
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyComplex_Check(op: *mut PyObject) -> c_int {
-    PyObject_TypeCheck(op, &raw mut PyComplex_Type)
+    PyObject_TypeCheck(op, python_static_object!(PyComplex_Type))
 }
 
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyComplex_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyComplex_Type)
+    Py_IS_TYPE(op, python_static_object!(PyComplex_Type))
 }
 
 extern_libpython! {

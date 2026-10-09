@@ -64,7 +64,7 @@ extern_libpython! {
 #[inline(always)]
 pub unsafe fn Py_GETENV(name: *const c_char) -> *mut c_char {
     #[allow(deprecated)]
-    if Py_IgnoreEnvironmentFlag != 0 {
+    if python_static_value!(Py_IgnoreEnvironmentFlag) != 0 {
         core::ptr::null_mut()
     } else {
         libc::getenv(name)

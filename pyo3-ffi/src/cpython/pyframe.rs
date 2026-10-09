@@ -32,13 +32,13 @@ extern_libpython! {
 
 #[inline]
 pub unsafe fn PyFrame_Check(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyFrame_Type)
+    Py_IS_TYPE(op, python_static_object!(PyFrame_Type))
 }
 
 #[cfg(Py_3_13)]
 #[inline]
 pub unsafe fn PyFrameLocalsProxy_Check(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyFrameLocalsProxy_Type)
+    Py_IS_TYPE(op, python_static_object!(PyFrameLocalsProxy_Type))
 }
 
 extern_libpython! {

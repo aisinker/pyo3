@@ -33,20 +33,20 @@ extern_libpython! {
 #[inline]
 #[cfg(not(any(all(PyPy, not(Py_3_12)), RustPython)))]
 pub unsafe fn PyWeakref_CheckRef(op: *mut PyObject) -> c_int {
-    PyObject_TypeCheck(op, &raw mut _PyWeakref_RefType)
+    PyObject_TypeCheck(op, python_static_object!(_PyWeakref_RefType))
 }
 
 #[inline]
 #[cfg(not(any(all(PyPy, not(Py_3_12)), RustPython)))]
 pub unsafe fn PyWeakref_CheckRefExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut _PyWeakref_RefType)
+    Py_IS_TYPE(op, python_static_object!(_PyWeakref_RefType))
 }
 
 #[inline]
 #[cfg(not(any(all(PyPy, not(Py_3_12)), RustPython)))]
 pub unsafe fn PyWeakref_CheckProxy(op: *mut PyObject) -> c_int {
-    (Py_IS_TYPE(op, &raw mut _PyWeakref_ProxyType) > 0
-        || Py_IS_TYPE(op, &raw mut _PyWeakref_CallableProxyType) > 0) as c_int
+    (Py_IS_TYPE(op, python_static_object!(_PyWeakref_ProxyType)) > 0
+        || Py_IS_TYPE(op, python_static_object!(_PyWeakref_CallableProxyType)) > 0) as c_int
 }
 
 #[inline]

@@ -220,9 +220,25 @@ macro_rules! pyobject_native_type_named (
 /// - `$typeobject` must be a known `static mut PyTypeObject`
 #[doc(hidden)]
 #[macro_export]
+#[cfg(not(feature = "dynamic-loading"))]
 macro_rules! pyobject_native_static_type_object(
     ($typeobject:expr) => {
         |_py| &raw mut $typeobject
+    };
+);
+
+/// Helper for defining the `$typeobject` argument for other macros in this module,
+/// resolving the type object from the Python library loaded at runtime.
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "dynamic-loading")]
+macro_rules! pyobject_native_static_type_object(
+    ($typeobject:path) => {
+        |_py| {
+            // SAFETY: the accessor emitted by `extern_libpython!` returns the
+            // address of the Python object; the caller only reads it.
+            unsafe { $crate::ffi::python_static_object!($typeobject) }
+        }
     };
 );
 

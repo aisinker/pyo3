@@ -18,7 +18,7 @@ pub unsafe fn PyBytes_Check(op: *mut PyObject) -> c_int {
 #[inline]
 #[cfg(not(RustPython))]
 pub unsafe fn PyBytes_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyBytes_Type)
+    Py_IS_TYPE(op, python_static_object!(PyBytes_Type))
 }
 
 extern_libpython! {

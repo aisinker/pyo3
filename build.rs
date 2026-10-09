@@ -47,10 +47,24 @@ fn configure_pyo3() -> Result<()> {
     // which allows consumers of `pyo3-build-config` APIs to depend on pyo3 instead of pyo3-ffi.
     interpreter_config.to_cargo_dep_env()?;
 
-    // Make `cargo test` etc work with non-system Python installations
-    add_libpython_rpath_link_args();
+    // Make `cargo test` etc work with non-system Python installations. With
+    // dynamic loading there is no libpython in the link line, so an rpath to the
+    // build-time library would be meaningless - and harmful, because it would let
+    // `dlopen` of a file name resolve to that library rather than to the one the
+    // application chose. `pyo3-ffi`'s build script skips it for the same reason.
+    if !dynamic_loading() {
+        add_libpython_rpath_link_args();
+    }
 
     Ok(())
+}
+
+/// Whether the `dynamic-loading` feature is enabled for a target which opens the
+/// Python shared library at runtime.
+fn dynamic_loading() -> bool {
+    let supported_target =
+        cargo_env_var("CARGO_CFG_WINDOWS").is_some() || cargo_env_var("CARGO_CFG_UNIX").is_some();
+    supported_target && env_var("CARGO_FEATURE_DYNAMIC_LOADING").is_some()
 }
 
 /// Enables a faux `std` feature by default.

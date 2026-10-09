@@ -32,7 +32,7 @@ pub unsafe fn PyUnicode_Check(op: *mut PyObject) -> c_int {
 #[inline]
 #[cfg(not(any(PyPy, RustPython)))]
 pub unsafe fn PyUnicode_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyUnicode_Type)
+    Py_IS_TYPE(op, python_static_object!(PyUnicode_Type))
 }
 
 pub const Py_UNICODE_REPLACEMENT_CHARACTER: Py_UCS4 = 0xFFFD;

@@ -15,12 +15,12 @@ extern_libpython! {
 
 #[inline]
 pub unsafe fn PyCMethod_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyCMethod_Type)
+    Py_IS_TYPE(op, python_static_object!(PyCMethod_Type))
 }
 
 #[inline]
 pub unsafe fn PyCMethod_Check(op: *mut PyObject) -> c_int {
-    PyObject_TypeCheck(op, &raw mut PyCMethod_Type)
+    PyObject_TypeCheck(op, python_static_object!(PyCMethod_Type))
 }
 
 #[cfg(not(GraalPy))]

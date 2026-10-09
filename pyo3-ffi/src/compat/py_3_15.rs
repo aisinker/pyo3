@@ -11,7 +11,7 @@ compat_function!(
     ) -> *mut PyBytesWriter {
 
         if size < 0 {
-            crate::PyErr_SetString(crate::PyExc_ValueError, c"size must be >= 0".as_ptr() as *const _);
+            crate::PyErr_SetString(python_static_value!(crate::PyExc_ValueError), c"size must be >= 0".as_ptr() as *const _);
             return core::ptr::null_mut();
         }
 
@@ -116,7 +116,7 @@ compat_function!(
     #[inline]
     pub unsafe fn PyBytesWriter_Resize(writer: *mut PyBytesWriter, size: crate::Py_ssize_t) -> core::ffi::c_int {
         if size < 0 {
-            crate::PyErr_SetString(crate::PyExc_ValueError, c"size must be >= 0".as_ptr());
+            crate::PyErr_SetString(python_static_value!(crate::PyExc_ValueError), c"size must be >= 0".as_ptr());
             return -1;
         }
         if _PyBytesWriter_Resize_impl(writer, size, 1) < 0 {

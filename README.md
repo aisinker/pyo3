@@ -16,7 +16,7 @@
 
 ## Usage
 
-Requires Rust 1.85 or greater.
+Requires Rust 1.85 or greater. The `dynamic-loading` feature additionally requires Rust 1.99 or greater.
 
 PyO3 supports the following Python distributions:
   - CPython 3.9 or greater

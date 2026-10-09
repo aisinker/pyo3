@@ -95,14 +95,17 @@ where
 /// This must only be called after `Py_IsInitialized()` has returned true.
 ///
 /// If the `Once` was never started (e.g. the interpreter was initialized
-/// externally, not through PyO3), `call_once` runs the empty closure and
-/// returns — this is fine because `initialize()` checks
-/// `Py_IsInitialized()` inside its closure and skips `Py_InitializeEx` if
-/// the interpreter is already running. If the `Once` is currently in
-/// progress (another thread is inside `initialize()`), `call_once` blocks
-/// until it completes.
+/// externally, not through PyO3), `call_once` runs the closure below, which
+/// asserts the interpreter is initialized — this is fine because `initialize()`
+/// checks `Py_IsInitialized()` inside its closure and skips `Py_InitializeEx` if
+/// the interpreter is already running. If the `Once` is currently in progress
+/// (another thread is inside `initialize()`), `call_once` blocks until it
+/// completes.
 pub(crate) fn wait_for_initialization() {
-    // TODO: use START.wait_force() on MSRV 1.86
+    // TODO: `Once::wait_force` (Rust 1.86) would express this directly, but
+    // PyO3's platform `Once` would have to expose it for both backends:
+    // `parking_lot::Once` has no equivalent, and its `call_once(|| {})` would
+    // additionally mark the `Once` as completed.
     // TODO: may not be needed on Python 3.15 (https://github.com/python/cpython/pull/146303)
     START.call_once(|| {
         assert_ne!(unsafe { crate::ffi::Py_IsInitialized() }, 0);

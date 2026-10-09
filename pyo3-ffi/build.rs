@@ -3,7 +3,8 @@ use pyo3_build_config::{
     pyo3_build_script_impl::{
         BuildConfig, BuildConfigSource, MaximumVersionExceeded, cargo_env_var, env_var,
         errors::Result, is_linking_libpython_for_target, print_feature_cfgs,
-        print_libpython_rpath_link_args, resolve_build_config, target_triple_from_env,
+        print_libpython_rpath_link_args, resolve_build_config, rustc_minor_version,
+        target_triple_from_env,
     },
     warn,
 };
@@ -332,6 +333,63 @@ fn emit_link_config(build_config: &BuildConfig) -> Result<()> {
     Ok(())
 }
 
+/// Whether the `dynamic-loading` feature is enabled for a target which supports
+/// opening the Python shared library at runtime.
+///
+/// When it is, the build script must not emit any `cargo:rustc-link-*` lines for
+/// libpython: all symbols are resolved at runtime instead.
+fn dynamic_loading() -> bool {
+    let supported_target =
+        cargo_env_var("CARGO_CFG_WINDOWS").is_some() || cargo_env_var("CARGO_CFG_UNIX").is_some();
+    supported_target && env_var("CARGO_FEATURE_DYNAMIC_LOADING").is_some()
+}
+
+/// Checks that the compiler can define the C variadic functions which the
+/// `dynamic-loading` feature uses to provide the variadic entries of the Python
+/// API: defining them was stabilized in Rust 1.99.
+///
+/// `pyo3` and `pyo3-ffi` keep their `rust-version` at the version which the rest
+/// of the crate supports, so the mismatch is reported here - and only when the
+/// feature which needs the newer compiler is enabled.
+fn ensure_dynamic_loading_supported() -> Result<()> {
+    if !dynamic_loading() {
+        return Ok(());
+    }
+
+    let minor_version = rustc_minor_version();
+    let found = minor_version.map_or_else(|| "unknown".to_owned(), |minor| format!("1.{minor}"));
+    ensure!(
+        minor_version.is_some_and(|minor| minor >= 99),
+        "the `dynamic-loading` feature needs to define C variadic functions, which was \
+         stabilized in Rust 1.99, but the compiler in use is {found}; update Rust or build \
+         without the `dynamic-loading` feature"
+    );
+    Ok(())
+}
+
+/// Checks that the `dynamic-loading` feature is only used with CPython.
+///
+/// The loader resolves a symbol by name, so the `link_name` declarations which
+/// exist for the PyPy and GraalPy C API are not applied, and a few entries have
+/// no wrapper at all because they are PyPy-only (`_PyObject_CallFunction_SizeT`
+/// is the one today). The mode is therefore CPython-only, as the guide says;
+/// report that here rather than leaving a PyPy or GraalPy build to fail at the
+/// first symbol lookup, or in the middle of a link.
+fn ensure_dynamic_loading_implementation(interpreter_config: &InterpreterConfig) -> Result<()> {
+    if !dynamic_loading() {
+        return Ok(());
+    }
+
+    let implementation = interpreter_config.implementation();
+    ensure!(
+        implementation == PythonImplementation::CPython,
+        "the `dynamic-loading` feature is only implemented for CPython, but this build is \
+         configured against {implementation:?}; configure a CPython interpreter or build \
+         without the `dynamic-loading` feature"
+    );
+    Ok(())
+}
+
 /// Prepares the PyO3 crate for compilation.
 ///
 /// This uses pyo3-build-config implementation to detect the target Python interpreter and validate
@@ -350,14 +408,28 @@ fn configure_pyo3_ffi() -> Result<()> {
 
     ensure_python_version(interpreter_config)?;
     ensure_target_pointer_width(interpreter_config)?;
+    ensure_dynamic_loading_supported()?;
+    ensure_dynamic_loading_implementation(interpreter_config)?;
 
     // Serialize the whole interpreter config into DEP_PYTHON_PYO3_CONFIG env var.
     interpreter_config.to_cargo_dep_env()?;
 
+    let dynamic_loading = dynamic_loading();
+
     if is_linking_libpython_for_target(&target)
         && !interpreter_config.suppress_build_script_link_lines()
+        && !dynamic_loading
     {
         emit_link_config(&build_config)?;
+    }
+
+    if dynamic_loading {
+        // Tell the runtime loader which shared library this build was
+        // configured against, so that it prefers the same interpreter as the
+        // one used for the ABI/layout decisions made while compiling.
+        if let Some(lib_name) = interpreter_config.lib_name() {
+            println!("cargo:rustc-env=PYO3_DYNAMIC_LIBRARY_NAME={lib_name}");
+        }
     }
 
     for cfg in interpreter_config.build_script_outputs() {
@@ -371,8 +443,12 @@ fn configure_pyo3_ffi() -> Result<()> {
 
     print_feature_cfgs();
 
-    // Make `cargo test` etc work with non-system Python installations
-    print_libpython_rpath_link_args(&target, interpreter_config);
+    // Make `cargo test` etc work with non-system Python installations. With
+    // dynamic loading there is no link-time dependency on libpython, so an
+    // rpath to it would be meaningless (and may point at the wrong library).
+    if !dynamic_loading {
+        print_libpython_rpath_link_args(&target, interpreter_config);
+    }
 
     Ok(())
 }

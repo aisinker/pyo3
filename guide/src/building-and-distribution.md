@@ -347,6 +347,46 @@ For distributing your program to non-technical users, you will have to consider 
 Note that PyPy cannot be embedded in Rust (or any other software).
 Support for this is tracked on the [PyPy issue tracker](https://github.com/pypy/pypy/issues/3836).
 
+### Loading the Python shared library at runtime
+
+The [`dynamic-loading`](features.md#dynamic-loading) feature removes the build-time *link* dependency on libpython.
+With it enabled, PyO3 does not link against the Python shared library (or its import library) at all; instead the library is opened at runtime and every Python C API symbol is resolved from it, which matches what was requested in [issue 2668](https://github.com/PyO3/pyo3/issues/2668).
+
+This makes it possible to
+
+- decide at runtime which Python to use, for example after downloading a Python distribution, and
+- ship a plugin which only needs Python when the user actually uses Python features.
+
+It requires Rust 1.99 or newer, because the C variadic entries of the Python API are provided as real wrappers; enabling the feature on an older compiler is reported as an error rather than raising the minimum supported Rust version of PyO3 itself.
+
+A library is located the first time a Python API is used, unless one has already been opened explicitly:
+
+1. [`pyo3::ffi::dynamic_loading::load`]({{#PYO3_DOCS_URL}}/pyo3_ffi/dynamic_loading/fn.load.html) can be called with an explicit path. This gives the application full control; it must happen before any other Python API call, and once a library is loaded it cannot be replaced.
+2. Otherwise the `PYO3_DYNAMIC_LIBRARY` environment variable may name the shared library (for example `C:\...\python312.dll` or `libpython3.12.so.1.0`).
+3. Otherwise, with `PYO3_PYTHON` set, the shared library next to the interpreter it names, and then the library matching the build configuration, are used.
+4. Otherwise the shared library matching the interpreter used at build time is used, and
+5. otherwise the usual locations (`python3*.dll` on `PATH` on Windows, the `libpython3*` library names elsewhere) - but only for a build whose configuration does not pin a version, which in practice means an `abi3` build.
+
+The entries are tried in the order listed above, so an interpreter named by `PYO3_PYTHON` wins over the library PyO3 was built against, and the platform's own search path is only consulted when neither is available. An explicit `load` and `PYO3_DYNAMIC_LIBRARY` name a specific library, so they never fall back to a different one: a path which cannot be loaded is an error, and `loaded_path()` reports the file which was really opened. (On Windows a module of the same file name which the process has already loaded is reused - that is the interpreter hosting a Python extension module, for instance - and its real path is the one reported.)
+
+Every candidate has to be the library this build can use before it is accepted, so that an unrelated file, or a Python of a version or variant whose object layouts the compiled code does not match, is reported instead of being loaded and failing later:
+
+- a file which does not export the Python C API (`Py_Initialize`) is refused - on Windows `LoadLibraryExW` opens an `.exe` happily, and the interpreter executable is never offered as a library;
+- unless the build is an `abi3` build, the file name has to encode the same version, and the same variant (debug, free-threaded), as the configuration.
+
+The error which `load_default()` returns lists the candidates which were tried, so an unusable `PYO3_PYTHON` or a Python of the wrong version is easy to spot.
+
+As with an ordinary build, the interpreter which is loaded must be compatible with the ABI PyO3 was compiled against: a build without `abi3` must load the same Python version. The interpreter used at build time is still needed for the version and layout configuration, unless [`PYO3_CONFIG_FILE`](#advanced-config-files) is used.
+
+Some things behave differently in this mode:
+
+- The Python data symbols (`PyDict_Type`, `PyExc_ValueError`, ...) are no longer `static`s in `pyo3::ffi`; they become functions with the same name (`ffi::PyExc_ValueError()`, `ffi::PyDict_Type()`). The `python_static_object!` and `python_static_value!` macros provided by `pyo3-ffi` resolve either form. This also means that a symbol which is an array (`PyUnstable_ExecutableKinds`) is read as a copy, and that a symbol cannot be written to (`PyImport_Inittab = ...`); those are compile errors rather than silently doing nothing.
+- The C variadic functions (`PyErr_Format`, `Py_BuildValue`, `PySys_WriteStdout`, ...) are provided as wrappers. Each one forwards its `va_list` to the corresponding non-variadic function of the C API (for example `PyErr_Format` to `PyErr_FormatV`), or reimplements the few which have none.
+- `PyErr_ResourceWarning` has no way to pass its `source` object through the stable ABI, so the warning it records has no source. Its category, message and location are the same as CPython's.
+- A warning message which UTF-8 cannot represent (a lone surrogate, for instance) is written in its `backslashreplace` form rather than raising `UnicodeEncodeError`; a message containing a NUL byte is truncated at it.
+- This mode targets CPython: the symbol name mangling for PyPy and GraalPy (their `cfg_attr(...link_name...)` declarations) is not applied, and enabling the feature for an interpreter other than CPython is reported as an error by the build script.
+- A missing symbol panics with the name of the symbol which could not be resolved.
+
 ### Statically embedding the Python interpreter
 
 Embedding the Python interpreter statically means including the contents of a Python static library directly inside your Rust binary.

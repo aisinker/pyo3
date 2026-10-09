@@ -40,6 +40,14 @@ abi3t-py315 = ["abi3t"]
 extension-module = ["pyo3-build-config/extension-module"]
 generate-import-lib = ["pyo3-build-config/generate-import-lib"]
 
+# Do not link against libpython at build time. Instead, every Python C API
+# symbol is resolved from a shared library which the application opens at
+# runtime (`LoadLibraryExW` on Windows, `dlopen` elsewhere).
+#
+# See `pyo3_ffi::dynamic_loading` for how the library is located. Only
+# implemented for CPython on Windows and Unix-like platforms.
+dynamic-loading = []
+
 [dev-dependencies]
 paste = "1"
 

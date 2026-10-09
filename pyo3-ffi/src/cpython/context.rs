@@ -16,17 +16,17 @@ extern_libpython! {
 
 #[inline]
 pub unsafe fn PyContext_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyContext_Type)
+    Py_IS_TYPE(op, python_static_object!(PyContext_Type))
 }
 
 #[inline]
 pub unsafe fn PyContextVar_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyContextVar_Type)
+    Py_IS_TYPE(op, python_static_object!(PyContextVar_Type))
 }
 
 #[inline]
 pub unsafe fn PyContextToken_CheckExact(op: *mut PyObject) -> c_int {
-    Py_IS_TYPE(op, &raw mut PyContextToken_Type)
+    Py_IS_TYPE(op, python_static_object!(PyContextToken_Type))
 }
 
 extern_libpython! {

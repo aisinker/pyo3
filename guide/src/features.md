@@ -78,6 +78,18 @@ See the [building and distribution](building-and-distribution.md#minimum-python-
 
 ## Features for embedding Python in Rust
 
+### `dynamic-loading`
+
+This feature removes the build-time *link* dependency on libpython: nothing links against a Python library at all.
+Every Python C API symbol is instead resolved from a shared library which the application opens at runtime, with `LoadLibraryExW` on Windows and `dlopen` elsewhere.
+
+It is intended for applications which must decide at runtime which Python to use (for example after downloading a Python distribution), and for plugins which may run without any Python at all.
+It is only implemented for CPython on Windows and Unix-like platforms; the build script reports an error if it is enabled for another implementation.
+
+The C variadic functions of the Python API are provided as real wrappers, which needs to define C variadic functions; that was stabilized in Rust 1.99, so this feature requires Rust 1.99 or newer (see [issue 2668](https://github.com/PyO3/pyo3/issues/2668)). The rest of PyO3 keeps its usual minimum supported Rust version, and enabling this feature on an older compiler is reported as an error.
+
+See the [building and distribution](building-and-distribution.md#loading-the-python-shared-library-at-runtime) section for how the library is located and for the limitations of this mode.
+
 ### `auto-initialize`
 
 This feature changes [`Python::attach`]({{#PYO3_DOCS_URL}}/pyo3/marker/struct.Python.html#method.attach) to automatically initialize a Python interpreter (by calling [`Python::initialize`]({{#PYO3_DOCS_URL}}/pyo3/marker/struct.Python.html#method.initialize)) if needed.

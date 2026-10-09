@@ -308,7 +308,7 @@ unsafe fn tp_dealloc(slf: *mut ffi::PyObject, type_obj: &crate::Bound<'_, PyType
 
         // For `#[pyclass]` types which inherit from PyAny, we can just call tp_free
         #[cfg(not(RustPython))]
-        let base_object_type_ptr = &raw const ffi::PyBaseObject_Type;
+        let base_object_type_ptr = ffi::python_static_object!(ffi::PyBaseObject_Type) as *const _;
         #[cfg(RustPython)]
         let base_object_type_ptr = {
             static TYPE: PyOnceLock<crate::Py<PyType>> = PyOnceLock::new();
